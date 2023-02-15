@@ -7,16 +7,16 @@ package PKGVideo;
 	parameter int charsH = $floor(VGA::resH / PKGFont::fontWidth);
 	parameter int charsV = $floor(VGA::resV / PKGFont::fontHeight);
 
-	// bits needed to store the screen dimensions in number of characters
-
-	parameter bitsCharsH = $clog2(charsH);
-	parameter bitsCharsV = $clog2(charsV);
-
 	// total number of characters
 	parameter chars = charsH * charsV;
 
 	// bits needed to store the total number of characters
 	parameter bitsChars = $clog2(chars);
+
+	// bits needed to store the screen dimensions in number of characters
+
+	parameter bitsCharsH = $clog2(charsH);
+	parameter bitsCharsV = $clog2(charsV);
 
 	// number of numbers to display on the left of the screen
 	parameter numbers    = 10;
@@ -24,12 +24,17 @@ package PKGVideo;
 	// number of bits each number should have
 	parameter bitsNumber = 8;
 
+	parameter plotResH = (64 * PKGFont::fontWidth)  + 6;
+	parameter plotResV = (09 * PKGFont::fontHeight) + 8 + 7;
+
+	parameter bitsPlotResH = $clog2(plotResH);
+	parameter bitsPlotResV = $clog2(plotResV);
+
 endpackage
 
 // the main video module
 
 // outputs:
-
 //     - all VGA signals
 
 // inputs:
@@ -46,6 +51,9 @@ module Video(
 	input [PKGVideo::bitsNumber - 1:0] numbers [PKGVideo::numbers - 1:0],
 	input [MIDI::bits - 1:0] note,
 	input [MIDI::bits - 1:0] velocity,
+
+	input [PKG_ADC::bits - 1:0] adc [PKG_ADC::inputs - 1:0],
+	input ready,
 
 	input clk
 
@@ -72,12 +80,35 @@ module Video(
 	// text module -- determines what text is displayed on screen
 	TextMode tm(valueText, row, column, numbers, note, velocity);
 
+	wire boundsH = (column > 116) && (column < 635);
+
+	wire plotEnable1 = boundsH && (row > 039) && (row < 199);
+	wire plotEnable2 = boundsH && (row > 199) && (row < 359);
+
+	reg [PKGVideo::bitsPlotResV - 1:0] plot1 [PKGVideo::plotResH - 1:0];
+	reg [PKGVideo::bitsPlotResV - 1:0] plot2 [PKGVideo::plotResH - 1:0];
+
+	reg [PKGVideo::bitsPlotResH - 1:0] idx = 0;
+
+	always @(posedge ready) begin
+
+	   if (idx < PKGVideo::plotResH - 1) idx <= idx + 1;
+	   else idx <= 0;
+
+	   plot1[idx] <= (adc[0] * PKGVideo::plotResV) / { PKG_ADC::bits {1'b1} };
+	   plot2[idx] <= (adc[1] * PKGVideo::plotResV) / { PKG_ADC::bits {1'b1} };
+
+	end
+
+	assign plotValue1 = plot1[column - 117] == 198 - row;
+	assign plotValue2 = plot2[column - 117] == 358 - row;
+
 	// set pixel to white if text is located where the pixel is at
 	// don't output pixel if it is off screen
 	// extend to four bits because the Basys 3 has 4 bit color
 
-	assign vga.r = { 4{ valueText & enable } };
-	assign vga.g = { 4{ valueText & enable } };
+	assign vga.r = { 4{ enable & (plotEnable1 ? plotValue1 : valueText) } };
+	assign vga.g = { 4{ enable & (plotEnable2 ? plotValue2 : valueText) } };
 	assign vga.b = { 4{ valueText & enable } };
 
 endmodule
@@ -126,19 +157,13 @@ module TextMode(
 
 	// find coordinates in terms of characters
 
-	wire [PKGVideo::bitsCharsH - 1:0] x;
-	wire [PKGVideo::bitsCharsV - 1:0] y;
-
-	assign x = column / PKGFont::fontWidth;
-	assign y = row    / PKGFont::fontHeight;
+	wire [PKGVideo::bitsCharsH - 1:0] x = column / PKGFont::fontWidth;
+	wire [PKGVideo::bitsCharsV - 1:0] y = row    / PKGFont::fontHeight;
 
 	// find pixel offset within the character
 
-	wire [PKGFont::bitsFontWidth  - 1:0] xr;
-	wire [PKGFont::bitsFontHeight - 1:0] yr;
-
-	assign xr = column - (x * PKGFont::fontWidth);
-	assign yr = row    - (y * PKGFont::fontHeight);
+	wire [PKGFont::bitsFontWidth  - 1:0] xr = column - (x * PKGFont::fontWidth);
+	wire [PKGFont::bitsFontHeight - 1:0] yr = row    - (y * PKGFont::fontHeight);
 
 	// Font output:
 
@@ -165,61 +190,61 @@ module TextMode(
 
 			// character 3 is '0'
 
-			// number zero
+			// number one
 
 			getIDX(03, 10): return 3 + (numbers[0] / 100);
 			getIDX(03, 11): return 3 + (numbers[0] % 100) / 10;
 			getIDX(03, 12): return 3 + (numbers[0] % 100) % 10;
 
-			// number one
+			// number two
 
 			getIDX(05, 10): return 3 + (numbers[1] / 100);
 			getIDX(05, 11): return 3 + (numbers[1] % 100) / 10;
 			getIDX(05, 12): return 3 + (numbers[1] % 100) % 10;
 
-			// number two
+			// number three
 
 			getIDX(07, 10): return 3 + (numbers[2] / 100);
 			getIDX(07, 11): return 3 + (numbers[2] % 100) / 10;
 			getIDX(07, 12): return 3 + (numbers[2] % 100) % 10;
 
-			// number three
+			// number four
 
 			getIDX(09, 10): return 3 + (numbers[3] / 100);
 			getIDX(09, 11): return 3 + (numbers[3] % 100) / 10;
 			getIDX(09, 12): return 3 + (numbers[3] % 100) % 10;
 
-			// number four
+			// number five
 
 			getIDX(11, 10): return 3 + (numbers[4] / 100);
 			getIDX(11, 11): return 3 + (numbers[4] % 100) / 10;
 			getIDX(11, 12): return 3 + (numbers[4] % 100) % 10;
 
-			// number five
+			// number six
 
 			getIDX(13, 10): return 3 + (numbers[5] / 100);
 			getIDX(13, 11): return 3 + (numbers[5] % 100) / 10;
 			getIDX(13, 12): return 3 + (numbers[5] % 100) % 10;
 
-			// number six
+			// number seven
 
 			getIDX(15, 10): return 3 + (numbers[6] / 100);
 			getIDX(15, 11): return 3 + (numbers[6] % 100) / 10;
 			getIDX(15, 12): return 3 + (numbers[6] % 100) % 10;
 
-			// number seven
+			// number eight
 
 			getIDX(17, 10): return 3 + (numbers[7] / 100);
 			getIDX(17, 11): return 3 + (numbers[7] % 100) / 10;
 			getIDX(17, 12): return 3 + (numbers[7] % 100) % 10;
 
-			// number eight
+			// number nine
 
 			getIDX(19, 10): return 3 + (numbers[8] / 100);
 			getIDX(19, 11): return 3 + (numbers[8] % 100) / 10;
 			getIDX(19, 12): return 3 + (numbers[8] % 100) % 10;
 
-			// number nine
+			// number ten
 
 			getIDX(21, 10): return 3 + (numbers[9] / 100);
 			getIDX(21, 11): return 3 + (numbers[9] % 100) / 10;
@@ -230,7 +255,7 @@ module TextMode(
 			getIDX(26, 03): return 3 + (note % 100) / 10;
 			getIDX(26, 04): return 3 + (note % 100) % 10;
 
-			// last velocity value
+			// last note value
 
 			getIDX(26, 75): return 3 + (velocity % 100) / 10;
 			getIDX(26, 76): return 3 + (velocity % 100) % 10;

@@ -16,7 +16,9 @@ sudo ip route add $address dev lo
 
 cd src
 
-# listen to the
+# listen to the virtual keyboard's multicast address and pipe the data
+# to the testbench
+
 socat UDP4-RECV:$port,ip-add-membership=$address:lo - | vvp ../bin/a.out -fst
 
 # disable multicast routing to the loopback device

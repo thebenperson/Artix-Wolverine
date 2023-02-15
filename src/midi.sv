@@ -2,12 +2,6 @@
 
 package MIDI;
 
-	// MIDI baud rate (bps)
-	parameter baud = 31250;
-
-	// baud period in clock cycles
-	parameter period = int'(100e6 / baud);
-
 	// bits needed to store the note and velocity
 	parameter bits = 7;
 
@@ -24,8 +18,6 @@ package MIDI;
 
 endpackage
 
-import MIDI::I;
-
 // MIDI reciever
 
 // outputs:
@@ -38,20 +30,12 @@ import MIDI::I;
 //     - UART signal from the MIDI keyboard
 //     - 100 MHz clock
 
-module MIDI_RX(
-
-	output MIDI::I midi,
-	output reg [7:0] r1,
-
-	input rx,
-	input clk
-
-);
+module MIDI_RX(output MIDI::I midi, input rx, input clk);
 
 	// set ready to low at time t = 0
 	initial midi.ready <= 0;
 
-	// outputs from the UART module
+	// outputs of the UART module
 
 	wire readyRX;
 	wire [7:0] in;
@@ -108,9 +92,6 @@ module MIDI_RX(
 
 				endcase
 
-				// output status byte for debugging purposes
-				r1 <= in;
-
 			end else begin
 
 				case (state)
@@ -119,24 +100,16 @@ module MIDI_RX(
 
 						// this state reads the note byte
 
-						// set note pressed
-						midi.note <= in[MIDI::bits - 1:0];
-
-						// read the velocity byte
-						state <= VELOCITY;
+						midi.note <= in[MIDI::bits - 1:0]; // set note pressed
+						state     <= VELOCITY;             // read the velocity byte
 
 					end
 
 					VELOCITY: begin
 
-						// set velocity of the note
-						midi.velocity <= in[MIDI::bits - 1:0];
-
-						// outputs are now valid
-						midi.ready <= 1;
-
-						// read the next status byte
-						state <= READ;
+						midi.velocity <= in[MIDI::bits - 1:0]; // set velocity of the note
+						midi.ready    <= 1;                    // outputs are now valid
+						state         <= READ;                 // read the next status byte
 
 					end
 
@@ -176,11 +149,17 @@ module MIDI_UART(
 
 );
 
-	// half of the baud period (rounded down?)
-	localparam delta = ((MIDI::period - 1) / 2) + 1;
+	// MIDI baud rate (bps)
+	localparam baud = 31250;
 
-	// number of bits needed for delta
-	localparam bitsPeriod = $clog2(MIDI::period);
+	// baud period in clock cycles
+	localparam int period = 100e6 / baud;
+
+	// half of the baud period
+	localparam delta = ((period - 1) / 2) + 1;
+
+	// number of bits required for delta
+	localparam bitsPeriod = $clog2(period);
 
 	// set ready to low at time t = 0
 	initial ready <= 0;
@@ -242,7 +221,7 @@ module MIDI_UART(
 				// right each time a bit is read; when out[0] is 1 that
 				// means the last bit is here
 
-				if (counter >= MIDI::period) begin
+				if (counter >= period) begin
 
 					// if one baud period has passed
 

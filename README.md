@@ -27,11 +27,7 @@
 │   ├── text.hex
 │   └── top.sv
 ├── tests
-│   ├── font.sv
-│   ├── midi.sv
-│   ├── top.sv
-│   ├── vga.sv
-│   └── video.sv
+│   └── *
 └── tools
     ├── genfont.sh
     ├── gentext.sh
@@ -71,11 +67,6 @@
 ---
 
 ### `tests/`: Testbenches
-- `font.sv`: Testbench for the font module.
-- `midi.sv`: Testbench for the MIDI reciever.
-- `top.sv`: Testbench for the top module.
-- `vga.sv`: Testbench for the VGA module.
-- `video.sv`: Testbench for the video module.
 
 ---
 
@@ -90,7 +81,7 @@
 
 Running `make` in the project directory will build the simulation with the testbench for the top module by default. To change the testbench, set the makefile variable `test`.
 
-> For example, to include the testbench for the MIDI module, run `make test=midi`.
+> For example, to include the testbench for the font module, run `make test=font`.
 
 Run `make test` to start the simulation.
 

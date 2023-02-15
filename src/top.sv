@@ -23,6 +23,7 @@ module Top(
 	output Hsync,
 	output Vsync,
 
+	input [7:0] JXADC,
 	input JA,
 	input clk
 
@@ -43,10 +44,8 @@ module Top(
 	// some numbers that can be displayed on the screen
 	wire [PKGVideo::bitsNumber - 1:0] numbers [PKGVideo::numbers - 1:0];
 
-	// set the first number to the last MIDI status byte
-
 	MIDI::I midi;
-	MIDI_RX midi_rx(midi, numbers[0], JA, clk);
+	MIDI_RX midi_rx(midi, JA, clk);
 
 	reg [MIDI::bits - 1:0] note;
 	reg [MIDI::bits - 1:0] velocity;
@@ -74,14 +73,32 @@ module Top(
 
 	end
 
-	// set the last number to the current volume
-	assign numbers[9] = { 1'b0, volume };
+	// ADC outputs
+	wire [PKG_ADC::bits - 1:0] out [PKG_ADC::inputs - 1:0];
+
+	// raised when ADC outputs are valid
+	wire ready;
+
+	ADC adc(
+
+	   out,
+	   ready,
+	   JXADC[0],
+	   JXADC[4],
+	   JXADC[1],
+	   JXADC[5],
+	   clk
+
+	);
+
+	// display the two ADC values
+	assign numbers[0] = out[0][11:4];
+	assign numbers[1] = out[1][11:4];
 
 	// set the other numbers to zero
 	// eventually we will use these numbers to display the dial and
 	// switch values
 
-	assign numbers[1] = 0;
 	assign numbers[2] = 0;
 	assign numbers[3] = 0;
 	assign numbers[4] = 0;
@@ -90,9 +107,12 @@ module Top(
 	assign numbers[7] = 0;
 	assign numbers[8] = 0;
 
+	// set the last number to the current volume
+	assign numbers[9] = { 1'b0, volume };
+
 	// have the video module display the numbers, the note numbers, and
 	// the note velocity
 
-	Video video(vga, numbers, note, velocity, clk);
+	Video video(vga, numbers, note, velocity, out, ready, clk);
 
 endmodule
