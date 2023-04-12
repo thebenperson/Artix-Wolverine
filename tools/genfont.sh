@@ -21,8 +21,14 @@ function extract() {
 	# space
 	extract 32 32
 
-	# 0 - 9
+	# open and closed parentheses
+	extract 40 41
+
+	# 0 - 9 and colon
 	extract 48 58
+
+	# equals sign
+	extract 61 61
 
 	# A - Z
 	extract 65 90
