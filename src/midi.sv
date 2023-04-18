@@ -35,7 +35,7 @@ module MIDI_RX(output MIDI::I midi, input rx, input clk);
 	// set ready to low at time t = 0
 	initial midi.ready <= 0;
 
-	// outputs of the UART module
+	// inputs from the UART module
 
 	wire readyRX;
 	wire [7:0] in;
@@ -46,18 +46,14 @@ module MIDI_RX(output MIDI::I midi, input rx, input clk);
 	// state register for this module's state machine
 	enum { READ, NOTE, VELOCITY, CONTROLLER } state = READ;
 
-	reg lastState = 0;
-	always @(posedge clk) lastState <= readyRX;
-
+	// triggered when a new byte is recieved from the UART module
 	always @(posedge clk) begin
 
-		if (readyRX && !lastState) begin
-
-			// triggered when a byte is recieved from the UART module
+		if (readyRX) begin
 
 			if (in[7]) begin
 
-				// if it's a status byte
+				// bit seven indicates a status byte
 
 				case (in[6:4])
 
@@ -65,25 +61,25 @@ module MIDI_RX(output MIDI::I midi, input rx, input clk);
 
 					3'b000: begin
 
-						midi.ready <= 0; // output not valid anymore
-						midi.value <= 0; // is a note off event
-						state <= NOTE;   // read note byte next
+						midi.value <= 0; // note off
+						state <= NOTE;   // read note byte
 
 					end
 
 					3'b001: begin
 
-						midi.ready <= 0; // output not valid anymore
-						midi.value <= 1; // is a note on event
-						state <= NOTE;   // read note byte next
+						midi.value <= 1; // note on
+						state <= NOTE;   // read note byte
 
 					end
 
 					3'b011: begin
 
-						midi.ready <= 0; // output not valid anymore
-						midi.value <= 0; // both value and note are zero
-						midi.note  <= 0; // to indicate controller event
+						// set the outputs to indicate this is a
+						// controller event
+
+						midi.value <= 0;
+						midi.note  <= 32;
 
 						// read controller bytes next
 						state <= CONTROLLER;
@@ -94,22 +90,29 @@ module MIDI_RX(output MIDI::I midi, input rx, input clk);
 
 			end else begin
 
+				// not a status byte
+
 				case (state)
 
 					NOTE: begin
 
 						// this state reads the note byte
 
-						midi.note <= in[MIDI::bits - 1:0]; // set note pressed
-						state     <= VELOCITY;             // read the velocity byte
+						// set note pressed (note inputs start at 41)
+						midi.note <= in[MIDI::bits - 1:0] - 41;
+
+						// read the velocity byte
+						state <= VELOCITY;
 
 					end
 
 					VELOCITY: begin
 
-						midi.velocity <= in[MIDI::bits - 1:0]; // set velocity of the note
-						midi.ready    <= 1;                    // outputs are now valid
-						state         <= READ;                 // read the next status byte
+						// set velocity of the note
+						midi.velocity <= in[MIDI::bits - 1:0];
+
+						// read the next status byte
+						state         <= READ;
 
 					end
 
@@ -124,6 +127,8 @@ module MIDI_RX(output MIDI::I midi, input rx, input clk);
 		end
 
 	end
+
+	assign midi.ready = (state == VELOCITY);
 
 endmodule
 
@@ -141,7 +146,7 @@ endmodule
 
 module MIDI_UART(
 
-	output reg       ready,
+	output           ready,
 	output reg [7:0] out,
 
 	input rx,
@@ -158,11 +163,8 @@ module MIDI_UART(
 	// half of the baud period
 	localparam delta = ((period - 1) / 2) + 1;
 
-	// number of bits required for delta
+	// number of bits required for the period
 	localparam bitsPeriod = $clog2(period);
-
-	// set ready to low at time t = 0
-	initial ready <= 0;
 
 	// state register for state machine
 	enum { WAIT, INIT, READ, END } state = WAIT;
@@ -183,9 +185,7 @@ module MIDI_UART(
 					// if rx has fallen
 
 					counter <= 0;
-
-					ready <= 0;     // outputs are no longer valid
-					state <= INIT;  // delay for half the baud period
+					state   <= INIT; // delay for half the baud period
 
 				end
 
@@ -244,23 +244,12 @@ module MIDI_UART(
 
 			end
 
-			END: begin
-
-				// this state waits for the stop bit
-
-				if (rx) begin
-
-					// if the stop bit was found
-
-					ready <= 1;    // our outputs are now valid
-					state <= WAIT; // wait for rx's next falling edge
-
-				end
-
-			end
+			END: state <= WAIT;
 
 		endcase
 
 	end
+
+	assign ready = (state == END);
 
 endmodule

@@ -10,16 +10,16 @@
 .
 ├── bin
 │   └── *
-├── doc
-│   └── *
 ├── Makefile
 ├── README.md
 ├── res
 │   ├── font.psfu
 │   └── text.txt
 ├── src
+│   ├── adc.sv
 │   ├── agv.sv
 │   ├── constraints.xdc
+│   ├── dac.sv
 │   ├── font.hex
 │   ├── font.sv
 │   ├── midi.sv
@@ -28,10 +28,11 @@
 │   └── top.sv
 ├── tests
 │   └── *
-└── tools
-    ├── genfont.sh
-    ├── gentext.sh
-    └── midi.sh
+├── tools
+│   ├── genfont.sh
+│   ├── gentext.sh
+│   └── midi.sh
+└── Wiring Diagram.fzz
 ```
 
 ### `bin/`: Executables
@@ -44,10 +45,6 @@
 
 ---
 
-### `doc/`: Documentation
-
----
-
 ### `res/`: Data and resources
 - `font.psfu`: The [PC screen font](https://en.wikipedia.org/wiki/PC_Screen_Font) used in this project.
 - `text.txt`: Static text to be displayed on the screen.
@@ -55,8 +52,10 @@
 ---
 
 ### `src/`: Project sources
+- `adc.sv`: Logic for the analog to digital converter.
 - `agv.sv`: Generation of VGA timing signals.
 - `constraints.xdc`: Maps port names to their corresponding pins on the Basys 3 FPGA.
+- `dac.sv`: Logic for the digital to analog converter.
 - `font.hex`: Contents of the font ROM.
 - `font.sv`: Retrieves bitmaps corresponding to character numbers.
 - `midi.sv`: A MIDI reciever module used to detect keyboard events.
@@ -74,6 +73,10 @@
 - `genfont.sh`: A script to extract the characters we want from the font.
 - `gentext.sh`: A script to convert an ASCII text file to a binary encoding suitable for this project.
 - `midi.sh`: A script to test the MIDI receiver module with [VMPK, a virtual MIDI keyboard](https://vmpk.sourceforge.io).
+
+---
+
+`Wiring Diagram.fzz`: The [Fritzing](https://fritzing.org) wiring diagram for this project.
 
 ---
 

@@ -18,7 +18,7 @@ package PKGFont;
 	// number of characters in the font
 	// !! UPDATE THIS NUMBER BASED ON THE genfont.sh SCRIPT OUTPUT !!
 
-	parameter chars    = 78;
+	parameter chars    = 81;
 
 	// bits needed to store the character number
 	parameter bitsChar = $clog2(chars);
@@ -50,7 +50,7 @@ module Font(
 
 	// retrieve the corresponding bitmap from the lookup table based on
 	// the character number
-	
+
 	assign out = rom[in];
 
 endmodule

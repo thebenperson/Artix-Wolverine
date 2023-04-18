@@ -6,7 +6,7 @@ package PKG_ADC;
 	parameter bits   = 12;
 
 	// number of ADC inputs
-	parameter inputs = 2;
+	parameter inputs = 3;
 
 endpackage
 
@@ -23,6 +23,8 @@ endpackage
 //     - first input negative
 //     - second input positive
 //     - second input negative
+//     - third input negative
+//     - third input negative
 //     - 100 MHz clock
 
 module ADC(
@@ -34,6 +36,8 @@ module ADC(
 	input n1,
 	input p2,
 	input n2,
+	input p3,
+	input n3,
 
 	input clk
 
@@ -61,6 +65,8 @@ module ADC(
 		.vauxn6(n1),
 		.vauxp14(p2),          // Auxiliary channel 14
 		.vauxn14(n2),
+		.vauxn7(p3),           // Auxiliary channel 7
+		.vauxn7(n3),
 		.busy_out(),           // ADC Busy signal
 		.channel_out(channel), // Channel Selection Outputs
 		.do_out(data),         // Output data bus for dynamic reconfiguration port
@@ -73,20 +79,25 @@ module ADC(
 
 	);
 
-	always @(posedge ready) begin
+	always @(posedge clk) begin
 
-		// triggered when an input is read
+		if (ready) begin
 
-		case (channel)
+			// triggered when an input is read
 
-			7'h16: out[0] <= data[15:4];
-			7'h1E: out[1] <= data[15:4];
+			case (channel)
 
-		endcase
+				7'h16: out[0] <= data[15:4];
+				7'h1E: out[1] <= data[15:4];
+				7'h17: out[2] <= data[15:4];
+
+			endcase
+
+		end
 
 	end
 
 	// only when last input is read
-	assign done = ready && (channel == 7'h1E);
+	assign done = ready && (channel == 7'h17);
 
 endmodule

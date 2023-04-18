@@ -19,12 +19,12 @@ package PKGVideo;
 	parameter bitsCharsV = $clog2(charsV);
 
 	// number of numbers to display on the left of the screen
-	parameter numbers    = 10;
+	parameter numbers    = 1;
 
 	// number of bits each number should have
 	parameter bitsNumber = 8;
 
-	parameter plotResH = (64 * PKGFont::fontWidth)  + 6;
+	parameter plotResH = (62 * PKGFont::fontWidth)  + 6;
 	parameter plotResV = (09 * PKGFont::fontHeight) + 8 + 7;
 
 	parameter bitsPlotResH = $clog2(plotResH);
@@ -51,6 +51,7 @@ module Video(
 	input [PKGVideo::bitsNumber - 1:0] numbers [PKGVideo::numbers - 1:0],
 	input [MIDI::bits - 1:0] note,
 	input [MIDI::bits - 1:0] velocity,
+	input [31:0] keys,
 
 	input [PKG_ADC::bits - 1:0] adc [PKG_ADC::inputs - 1:0],
 	input ready,
@@ -80,7 +81,7 @@ module Video(
 	// text module -- determines what text is displayed on screen
 	TextMode tm(valueText, row, column, numbers, note, velocity);
 
-	wire boundsH = (column > 116) && (column < 635);
+	wire boundsH = (column > 132) && (column < 635);
 
 	wire plotEnable1 = boundsH && (row > 039) && (row < 199);
 	wire plotEnable2 = boundsH && (row > 199) && (row < 359);
@@ -100,15 +101,15 @@ module Video(
 
 	end
 
-	assign plotValue1 = plot1[column - 117] == 198 - row;
-	assign plotValue2 = plot2[column - 117] == 358 - row;
+	assign plotValue1 = plot1[column - 133] == 198 - row;
+	assign plotValue2 = plot2[column - 133] == 358 - row;
 
 	// set pixel to white if text is located where the pixel is at
 	// don't output pixel if it is off screen
 	// extend to four bits because the Basys 3 has 4 bit color
 
-	assign vga.r = { 4{ enable & (plotEnable1 ? plotValue1 : valueText) } };
-	assign vga.g = { 4{ enable & (plotEnable2 ? plotValue2 : valueText) } };
+	assign vga.r = { 4{ enable & ((plotEnable1 & plotValue1 ) | valueText) } };
+	assign vga.g = { 4{ enable & ((plotEnable2 & plotValue2 ) | valueText) } };
 	assign vga.b = { 4{ valueText & enable } };
 
 endmodule
@@ -135,7 +136,8 @@ module TextMode(
 	input [VGA::bitsResH - 1:0] column,
 	input [PKGVideo::bitsNumber - 1:0] numbers [PKGVideo::numbers - 1:0],
 	input [MIDI::bits - 1:0] note,
-	input [MIDI::bits - 1:0] velocity
+	input [MIDI::bits - 1:0] velocity,
+	input [31:0] keys
 
 );
 
@@ -188,132 +190,84 @@ module TextMode(
 
 		case (idx)
 
-			// character 3 is '0'
-
+			// character 5 is '0'
 			// number one
 
-			getIDX(03, 10): return 3 + (numbers[0] / 100);
-			getIDX(03, 11): return 3 + (numbers[0] % 100) / 10;
-			getIDX(03, 12): return 3 + (numbers[0] % 100) % 10;
-
-			// number two
-
-			getIDX(05, 10): return 3 + (numbers[1] / 100);
-			getIDX(05, 11): return 3 + (numbers[1] % 100) / 10;
-			getIDX(05, 12): return 3 + (numbers[1] % 100) % 10;
-
-			// number three
-
-			getIDX(07, 10): return 3 + (numbers[2] / 100);
-			getIDX(07, 11): return 3 + (numbers[2] % 100) / 10;
-			getIDX(07, 12): return 3 + (numbers[2] % 100) % 10;
-
-			// number four
-
-			getIDX(09, 10): return 3 + (numbers[3] / 100);
-			getIDX(09, 11): return 3 + (numbers[3] % 100) / 10;
-			getIDX(09, 12): return 3 + (numbers[3] % 100) % 10;
-
-			// number five
-
-			getIDX(11, 10): return 3 + (numbers[4] / 100);
-			getIDX(11, 11): return 3 + (numbers[4] % 100) / 10;
-			getIDX(11, 12): return 3 + (numbers[4] % 100) % 10;
-
-			// number six
-
-			getIDX(13, 10): return 3 + (numbers[5] / 100);
-			getIDX(13, 11): return 3 + (numbers[5] % 100) / 10;
-			getIDX(13, 12): return 3 + (numbers[5] % 100) % 10;
-
-			// number seven
-
-			getIDX(15, 10): return 3 + (numbers[6] / 100);
-			getIDX(15, 11): return 3 + (numbers[6] % 100) / 10;
-			getIDX(15, 12): return 3 + (numbers[6] % 100) % 10;
-
-			// number eight
-
-			getIDX(17, 10): return 3 + (numbers[7] / 100);
-			getIDX(17, 11): return 3 + (numbers[7] % 100) / 10;
-			getIDX(17, 12): return 3 + (numbers[7] % 100) % 10;
-
-			// number nine
-
-			getIDX(19, 10): return 3 + (numbers[8] / 100);
-			getIDX(19, 11): return 3 + (numbers[8] % 100) / 10;
-			getIDX(19, 12): return 3 + (numbers[8] % 100) % 10;
-
-			// number ten
-
-			getIDX(21, 10): return 3 + (numbers[9] / 100);
-			getIDX(21, 11): return 3 + (numbers[9] % 100) / 10;
-			getIDX(21, 12): return 3 + (numbers[9] % 100) % 10;
+			getIDX(03, 13): return 5 + (numbers[0] / 100);
+			getIDX(03, 14): return 5 + (numbers[0] % 100) / 10;
+			getIDX(03, 15): return 5 + (numbers[0] % 100) % 10;
 
 			// last note value
 
-			getIDX(26, 03): return 3 + (note % 100) / 10;
-			getIDX(26, 04): return 3 + (note % 100) % 10;
+			getIDX(26, 03): return 5 + (note % 100) / 10;
+			getIDX(26, 04): return 5 + (note % 100) % 10;
 
 			// last note value
 
-			getIDX(26, 75): return 3 + (velocity % 100) / 10;
-			getIDX(26, 76): return 3 + (velocity % 100) % 10;
+			getIDX(26, 75): return 5 + (velocity % 100) / 10;
+			getIDX(26, 76): return 5 + (velocity % 100) % 10;
 
 			// if a key is pressed then indicate what key it was
 			// character 1 is a music note and character 2 is a space
 
-			getIDX(27, 08): return (note == 41) ? 1 : 2;
-			getIDX(27, 09): return (note == 41) ? 1 : 2;
-			getIDX(25, 10): return (note == 42) ? 1 : 2;
-			getIDX(27, 12): return (note == 43) ? 1 : 2;
-			getIDX(25, 14): return (note == 44) ? 1 : 2;
-			getIDX(27, 16): return (note == 45) ? 1 : 2;
-			getIDX(25, 18): return (note == 46) ? 1 : 2;
+			getIDX(27, 08): return keys[00] ? 1 : 2;
+			getIDX(27, 09): return keys[00] ? 1 : 2;
 
-			getIDX(27, 19): return (note == 47) ? 1 : 2;
-			getIDX(27, 20): return (note == 47) ? 1 : 2;
-			getIDX(27, 22): return (note == 48) ? 1 : 2;
-			getIDX(27, 23): return (note == 48) ? 1 : 2;
+			getIDX(25, 10): return keys[01] ? 1 : 2;
+			getIDX(27, 12): return keys[02] ? 1 : 2;
+			getIDX(25, 14): return keys[03] ? 1 : 2;
+			getIDX(27, 16): return keys[04] ? 1 : 2;
+			getIDX(25, 18): return keys[05] ? 1 : 2;
 
-			getIDX(25, 24): return (note == 49) ? 1 : 2;
-			getIDX(27, 26): return (note == 50) ? 1 : 2;
-			getIDX(25, 28): return (note == 51) ? 1 : 2;
-			getIDX(27, 29): return (note == 52) ? 1 : 2;
-			getIDX(27, 30): return (note == 52) ? 1 : 2;
+			getIDX(27, 19): return keys[06] ? 1 : 2;
+			getIDX(27, 20): return keys[06] ? 1 : 2;
 
-			getIDX(27, 32): return (note == 53) ? 1 : 2;
-			getIDX(27, 33): return (note == 53) ? 1 : 2;
+			getIDX(27, 22): return keys[07] ? 1 : 2;
+			getIDX(27, 23): return keys[07] ? 1 : 2;
 
-			getIDX(25, 34): return (note == 54) ? 1 : 2;
-			getIDX(27, 36): return (note == 55) ? 1 : 2;
-			getIDX(25, 38): return (note == 56) ? 1 : 2;
-			getIDX(27, 40): return (note == 57) ? 1 : 2;
-			getIDX(25, 42): return (note == 58) ? 1 : 2;
+			getIDX(25, 24): return keys[08] ? 1 : 2;
+			getIDX(27, 26): return keys[09] ? 1 : 2;
+			getIDX(25, 28): return keys[10] ? 1 : 2;
 
-			getIDX(27, 43): return (note == 59) ? 1 : 2;
-			getIDX(27, 44): return (note == 59) ? 1 : 2;
-			getIDX(27, 46): return (note == 60) ? 1 : 2;
-			getIDX(27, 47): return (note == 60) ? 1 : 2;
+			getIDX(27, 29): return keys[11] ? 1 : 2;
+			getIDX(27, 30): return keys[11] ? 1 : 2;
 
-			getIDX(25, 48): return (note == 61) ? 1 : 2;
-			getIDX(27, 50): return (note == 62) ? 1 : 2;
-			getIDX(25, 52): return (note == 63) ? 1 : 2;
+			getIDX(27, 32): return keys[12] ? 1 : 2;
+			getIDX(27, 33): return keys[12] ? 1 : 2;
 
-			getIDX(27, 53): return (note == 64) ? 1 : 2;
-			getIDX(27, 54): return (note == 64) ? 1 : 2;
-			getIDX(27, 56): return (note == 65) ? 1 : 2;
-			getIDX(27, 57): return (note == 65) ? 1 : 2;
+			getIDX(25, 34): return keys[13] ? 1 : 2;
+			getIDX(27, 36): return keys[14] ? 1 : 2;
+			getIDX(25, 38): return keys[15] ? 1 : 2;
+			getIDX(27, 40): return keys[16] ? 1 : 2;
+			getIDX(25, 42): return keys[17] ? 1 : 2;
 
-			getIDX(25, 58): return (note == 66) ? 1 : 2;
-			getIDX(27, 60): return (note == 67) ? 1 : 2;
-			getIDX(25, 62): return (note == 68) ? 1 : 2;
-			getIDX(27, 64): return (note == 69) ? 1 : 2;
-			getIDX(25, 66): return (note == 70) ? 1 : 2;
-			getIDX(27, 67): return (note == 71) ? 1 : 2;
-			getIDX(27, 68): return (note == 71) ? 1 : 2;
-			getIDX(27, 70): return (note == 72) ? 1 : 2;
-			getIDX(27, 71): return (note == 72) ? 1 : 2;
+			getIDX(27, 43): return keys[18] ? 1 : 2;
+			getIDX(27, 44): return keys[18] ? 1 : 2;
+
+			getIDX(27, 46): return keys[19] ? 1 : 2;
+			getIDX(27, 47): return keys[19] ? 1 : 2;
+
+			getIDX(25, 48): return keys[20] ? 1 : 2;
+			getIDX(27, 50): return keys[21] ? 1 : 2;
+			getIDX(25, 52): return keys[22] ? 1 : 2;
+
+			getIDX(27, 53): return keys[23] ? 1 : 2;
+			getIDX(27, 54): return keys[23] ? 1 : 2;
+
+			getIDX(27, 56): return keys[24] ? 1 : 2;
+			getIDX(27, 57): return keys[24] ? 1 : 2;
+
+			getIDX(25, 58): return keys[25] ? 1 : 2;
+			getIDX(27, 60): return keys[26] ? 1 : 2;
+			getIDX(25, 62): return keys[27] ? 1 : 2;
+			getIDX(27, 64): return keys[28] ? 1 : 2;
+			getIDX(25, 66): return keys[29] ? 1 : 2;
+
+			getIDX(27, 67): return keys[30] ? 1 : 2;
+			getIDX(27, 68): return keys[30] ? 1 : 2;
+
+			getIDX(27, 70): return keys[31] ? 1 : 2;
+			getIDX(27, 71): return keys[31] ? 1 : 2;
 
 			// none of the overrides matched -- look up what character
 			// to use from memory
